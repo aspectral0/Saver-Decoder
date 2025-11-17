@@ -27,6 +27,13 @@ const PRESETS = [
           amount: "1e308", // Maximum safe number as string
         }));
       }
+      // For Atom Idle, generators are in a top-level generators array
+      if (newData.generators && Array.isArray(newData.generators)) {
+        newData.generators = newData.generators.map((gen: any) => ({
+          ...gen,
+          count: "1e308", // Maximum safe number as string
+        }));
+      }
       return newData;
     },
   },

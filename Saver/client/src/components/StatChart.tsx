@@ -82,7 +82,7 @@ export default function StatChart({ data }: StatChartProps) {
         </div>
         <div className="h-64">
           <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={chartData}>
+            <LineChart data={chartData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
               <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
               <XAxis dataKey="time" />
               <YAxis tickFormatter={formatValue} />
@@ -128,7 +128,7 @@ export default function StatChart({ data }: StatChartProps) {
           </div>
           <div className="h-64">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={generatorData}>
+              <BarChart data={generatorData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
                 <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
                 <XAxis dataKey="name" />
                 <YAxis tickFormatter={formatValue} />

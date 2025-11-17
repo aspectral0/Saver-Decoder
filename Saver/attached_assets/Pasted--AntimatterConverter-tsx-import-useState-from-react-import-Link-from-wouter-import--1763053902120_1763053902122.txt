@@ -1,0 +1,587 @@
+// AntimatterConverter.tsx
+import { useState } from "react";
+import { Link } from "wouter";
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
+import { Card } from "@/components/ui/card";
+import { Separator } from "@/components/ui/separator";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Download, RefreshCw, FileCode, Clipboard, ArrowLeft } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import JsonViewer from "@/components/JsonViewer";
+import JsonEditor from "@/components/JsonEditor";
+import ValueEditor from "@/components/ValueEditor";
+import StatsDisplay from "@/components/StatsDisplay";
+import ThemeToggle from "@/components/ThemeToggle";
+import FileUploader from "@/components/FileUploader";
+
+const ANTIMATTER_PREFIX = "AntimatterDimensionsSavefileFormatAAB";
+
+// ------------------ Decompression helpers ------------------
+const keyStrBase64 = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=";
+const baseReverseDic: Record<string, Record<string, number>> = {};
+
+function getBaseValue(character: string): number {
+  if (!baseReverseDic["base64"]) {
+    baseReverseDic["base64"] = {};
+    for (let i = 0; i < keyStrBase64.length; i++) {
+      baseReverseDic["base64"][keyStrBase64.charAt(i)] = i;
+    }
+  }
+  return baseReverseDic["base64"][character];
+}
+
+function _decompress(length: number, resetValue: number, getNextValue: (index: number) => number): string {
+  const dictionary: string[] = [];
+  let next: number;
+  let enlargeIn = 4;
+  let dictSize = 4;
+  let numBits = 3;
+  let entry = "";
+  const result: string[] = [];
+  let i: number;
+  let w: string;
+  let bits: number, resb: number, maxpower: number, power: number;
+  let c: string;
+  const data = { val: getNextValue(0), position: resetValue, index: 1 };
+
+  for (i = 0; i < 3; i++) dictionary[i] = String(i);
+
+  bits = 0;
+  maxpower = Math.pow(2, 2);
+  power = 1;
+  while (power !== maxpower) {
+    resb = data.val & data.position;
+    data.position >>= 1;
+    if (data.position === 0) {
+      data.position = resetValue;
+      data.val = getNextValue(data.index++);
+    }
+    bits |= (resb > 0 ? 1 : 0) * power;
+    power <<= 1;
+  }
+
+  switch ((next = bits)) {
+    case 0:
+      bits = 0;
+      maxpower = Math.pow(2, 8);
+      power = 1;
+      while (power !== maxpower) {
+        resb = data.val & data.position;
+        data.position >>= 1;
+        if (data.position === 0) {
+          data.position = resetValue;
+          data.val = getNextValue(data.index++);
+        }
+        bits |= (resb > 0 ? 1 : 0) * power;
+        power <<= 1;
+      }
+      c = String.fromCharCode(bits);
+      break;
+    case 1:
+      bits = 0;
+      maxpower = Math.pow(2, 16);
+      power = 1;
+      while (power !== maxpower) {
+        resb = data.val & data.position;
+        data.position >>= 1;
+        if (data.position === 0) {
+          data.position = resetValue;
+          data.val = getNextValue(data.index++);
+        }
+        bits |= (resb > 0 ? 1 : 0) * power;
+        power <<= 1;
+      }
+      c = String.fromCharCode(bits);
+      break;
+    case 2:
+      return "";
+  }
+
+  dictionary[3] = c;
+  w = c;
+  result.push(c);
+
+  while (true) {
+    if (data.index > length) return "";
+
+    bits = 0;
+    maxpower = Math.pow(2, numBits);
+    power = 1;
+    while (power !== maxpower) {
+      resb = data.val & data.position;
+      data.position >>= 1;
+      if (data.position === 0) {
+        data.position = resetValue;
+        data.val = getNextValue(data.index++);
+      }
+      bits |= (resb > 0 ? 1 : 0) * power;
+      power <<= 1;
+    }
+
+    switch ((c = bits as any)) {
+      case 0:
+        bits = 0;
+        maxpower = Math.pow(2, 8);
+        power = 1;
+        while (power !== maxpower) {
+          resb = data.val & data.position;
+          data.position >>= 1;
+          if (data.position === 0) {
+            data.position = resetValue;
+            data.val = getNextValue(data.index++);
+          }
+          bits |= (resb > 0 ? 1 : 0) * power;
+          power <<= 1;
+        }
+        dictionary[dictSize++] = String.fromCharCode(bits);
+        c = String(dictSize - 1);
+        enlargeIn--;
+        break;
+      case 1:
+        bits = 0;
+        maxpower = Math.pow(2, 16);
+        power = 1;
+        while (power !== maxpower) {
+          resb = data.val & data.position;
+          data.position >>= 1;
+          if (data.position === 0) {
+            data.position = resetValue;
+            data.val = getNextValue(data.index++);
+          }
+          bits |= (resb > 0 ? 1 : 0) * power;
+          power <<= 1;
+        }
+        dictionary[dictSize++] = String.fromCharCode(bits);
+        c = String(dictSize - 1);
+        enlargeIn--;
+        break;
+      case 2:
+        return result.join("");
+    }
+
+    if (enlargeIn === 0) {
+      enlargeIn = Math.pow(2, numBits);
+      numBits++;
+    }
+
+    const code = Number(c);
+    if (dictionary[code]) {
+      entry = dictionary[code];
+    } else if (code === dictSize) {
+      entry = w + w.charAt(0);
+    } else {
+      return "";
+    }
+    result.push(entry);
+    dictionary[dictSize++] = w + entry.charAt(0);
+    enlargeIn--;
+    w = entry;
+
+    if (enlargeIn === 0) {
+      enlargeIn = Math.pow(2, numBits);
+      numBits++;
+    }
+  }
+}
+
+function decompressFromBase64(input: string): string {
+  if (!input) return "";
+  return _decompress(input.length, 32, (index: number) => getBaseValue(input.charAt(index)));
+}
+
+function _compress(uncompressed: string): string {
+  if (!uncompressed) return "";
+  let i: number, value: string;
+  const context_dictionary: Record<string, number> = {};
+  const context_dictionaryToCreate: Record<string, boolean> = {};
+  let context_c = "";
+  let context_wc = "";
+  let context_w = "";
+  let context_enlargeIn = 2;
+  let context_dictSize = 3;
+  let context_numBits = 2;
+  const context_data: number[] = [];
+  let context_data_val = 0;
+  let context_data_position = 0;
+  let ii: number;
+
+  for (ii = 0; ii < uncompressed.length; ii += 1) {
+    context_c = uncompressed.charAt(ii);
+    if (!Object.prototype.hasOwnProperty.call(context_dictionary, context_c)) {
+      context_dictionary[context_c] = context_dictSize++;
+      context_dictionaryToCreate[context_c] = true;
+    }
+
+    context_wc = context_w + context_c;
+    if (Object.prototype.hasOwnProperty.call(context_dictionary, context_wc)) {
+      context_w = context_wc;
+    } else {
+      if (Object.prototype.hasOwnProperty.call(context_dictionaryToCreate, context_w)) {
+        if (context_w.charCodeAt(0) < 256) {
+          for (i = 0; i < context_numBits; i++) {
+            context_data_val = context_data_val << 1;
+            if (context_data_position === 5) {
+              context_data_position = 0;
+              context_data.push(context_data_val);
+              context_data_val = 0;
+            } else {
+              context_data_position++;
+            }
+          }
+          value = context_w.charCodeAt(0);
+          for (i = 0; i < 8; i++) {
+            context_data_val = (context_data_val << 1) | (value & 1);
+            if (context_data_position === 5) {
+              context_data_position = 0;
+              context_data.push(context_data_val);
+              context_data_val = 0;
+            } else {
+              context_data_position++;
+            }
+            value = value >> 1;
+          }
+        } else {
+          value = 1;
+          for (i = 0; i < context_numBits; i++) {
+            context_data_val = (context_data_val << 1) | value;
+            if (context_data_position === 5) {
+              context_data_position = 0;
+              context_data.push(context_data_val);
+              context_data_val = 0;
+            } else {
+              context_data_position++;
+            }
+            value = 0;
+          }
+          value = context_w.charCodeAt(0);
+          for (i = 0; i < 16; i++) {
+            context_data_val = (context_data_val << 1) | (value & 1);
+            if (context_data_position === 5) {
+              context_data_position = 0;
+              context_data.push(context_data_val);
+              context_data_val = 0;
+            } else {
+              context_data_position++;
+            }
+            value = value >> 1;
+          }
+        }
+        context_enlargeIn--;
+        if (context_enlargeIn === 0) {
+          context_enlargeIn = Math.pow(2, context_numBits);
+          context_numBits++;
+        }
+        delete context_dictionaryToCreate[context_w];
+      } else {
+        value = context_dictionary[context_w];
+        for (i = 0; i < context_numBits; i++) {
+          context_data_val = (context_data_val << 1) | (value & 1);
+          if (context_data_position === 5) {
+            context_data_position = 0;
+            context_data.push(context_data_val);
+            context_data_val = 0;
+          } else {
+            context_data_position++;
+          }
+          value = value >> 1;
+        }
+      }
+      context_enlargeIn--;
+      if (context_enlargeIn === 0) {
+        context_enlargeIn = Math.pow(2, context_numBits);
+        context_numBits++;
+      }
+      context_dictionary[context_wc] = context_dictSize++;
+      context_w = String(context_c);
+    }
+  }
+
+  if (context_w !== "") {
+    if (Object.prototype.hasOwnProperty.call(context_dictionaryToCreate, context_w)) {
+      if (context_w.charCodeAt(0) < 256) {
+        for (i = 0; i < context_numBits; i++) {
+          context_data_val = context_data_val << 1;
+          if (context_data_position === 5) {
+            context_data_position = 0;
+            context_data.push(context_data_val);
+            context_data_val = 0;
+          } else {
+            context_data_position++;
+          }
+        }
+        value = context_w.charCodeAt(0);
+        for (i = 0; i < 8; i++) {
+          context_data_val = (context_data_val << 1) | (value & 1);
+          if (context_data_position === 5) {
+            context_data_position = 0;
+            context_data.push(context_data_val);
+            context_data_val = 0;
+          } else {
+            context_data_position++;
+          }
+          value = value >> 1;
+        }
+      } else {
+        value = 1;
+        for (i = 0; i < context_numBits; i++) {
+          context_data_val = (context_data_val << 1) | value;
+          if (context_data_position === 5) {
+            context_data_position = 0;
+            context_data.push(context_data_val);
+            context_data_val = 0;
+          } else {
+            context_data_position++;
+          }
+          value = 0;
+        }
+        value = context_w.charCodeAt(0);
+        for (i = 0; i < 16; i++) {
+          context_data_val = (context_data_val << 1) | (value & 1);
+          if (context_data_position === 5) {
+            context_data_position = 0;
+            context_data.push(context_data_val);
+            context_data_val = 0;
+          } else {
+            context_data_position++;
+          }
+          value = value >> 1;
+        }
+      }
+      context_enlargeIn--;
+      if (context_enlargeIn === 0) {
+        context_enlargeIn = Math.pow(2, context_numBits);
+        context_numBits++;
+      }
+      delete context_dictionaryToCreate[context_w];
+    } else {
+      value = context_dictionary[context_w];
+      for (i = 0; i < context_numBits; i++) {
+        context_data_val = (context_data_val << 1) | (value & 1);
+        if (context_data_position === 5) {
+          context_data_position = 0;
+          context_data.push(context_data_val);
+          context_data_val = 0;
+        } else {
+          context_data_position++;
+        }
+        value = value >> 1;
+      }
+    }
+    context_enlargeIn--;
+    if (context_enlargeIn === 0) {
+      context_enlargeIn = Math.pow(2, context_numBits);
+      context_numBits++;
+    }
+  }
+
+  value = 2;
+  for (i = 0; i < context_numBits; i++) {
+    context_data_val = (context_data_val << 1) | (value & 1);
+    if (context_data_position === 5) {
+      context_data_position = 0;
+      context_data.push(context_data_val);
+      context_data_val = 0;
+    } else {
+      context_data_position++;
+    }
+    value = value >> 1;
+  }
+
+  while (true) {
+    context_data_val = context_data_val << 1;
+    if (context_data_position === 5) {
+      context_data.push(context_data_val);
+      break;
+    } else context_data_position++;
+  }
+
+  return String.fromCharCode(...context_data);
+}
+
+function compressToBase64(input: string): string {
+  if (!input) return "";
+  const res = _compress(input);
+  let output = "";
+  let i = 0;
+  const len = res.length;
+  
+  while (i < len) {
+    const chr1 = res.charCodeAt(i++);
+    const chr2 = i < len ? res.charCodeAt(i++) : NaN;
+    const chr3 = i < len ? res.charCodeAt(i++) : NaN;
+    
+    const enc1 = chr1 >> 2;
+    const enc2 = ((chr1 & 3) << 4) | (chr2 >> 4);
+    let enc3 = ((chr2 & 15) << 2) | (chr3 >> 6);
+    let enc4 = chr3 & 63;
+    
+    if (isNaN(chr2)) {
+      enc3 = enc4 = 64;
+    } else if (isNaN(chr3)) {
+      enc4 = 64;
+    }
+    
+    output += keyStrBase64.charAt(enc1) + keyStrBase64.charAt(enc2) +
+              keyStrBase64.charAt(enc3) + keyStrBase64.charAt(enc4);
+  }
+  
+  return output;
+}
+
+function encodeAntimatterSave(data: any): string {
+  const json = JSON.stringify(data);
+  const compressed = compressToBase64(json);
+  return ANTIMATTER_PREFIX + compressed;
+}
+
+// ------------------ Component ------------------
+export default function AntimatterConverter() {
+  const { toast } = useToast();
+  const [saveInput, setSaveInput] = useState("");
+  const [decodedData, setDecodedData] = useState<any>(null);
+  const [fileName, setFileName] = useState("");
+  const [uploadedFileName, setUploadedFileName] = useState("");
+
+  const decodeAntimatterSave = (input: string) => {
+    const trimmed = input.trim();
+    const idx = trimmed.indexOf(ANTIMATTER_PREFIX);
+    if (idx === -1) throw new Error("Invalid save format");
+    let encoded = trimmed.substring(idx + ANTIMATTER_PREFIX.length);
+    encoded = encoded.replace(/-/g, '+').replace(/_/g, '/');
+    const decompressed = decompressFromBase64(encoded);
+    return JSON.parse(decompressed);
+  };
+
+  const handleFileUpload = (content: string, name: string) => {
+    setSaveInput(content);
+    setUploadedFileName(name);
+    toast({ title: "File uploaded", description: `${name} loaded.` });
+  };
+
+  const handleDecode = () => {
+    try {
+      const decoded = decodeAntimatterSave(saveInput);
+      setDecodedData(decoded);
+      setFileName(`antimatter_${Date.now()}.txt`);
+      toast({ title: "Decoded", description: "Save decoded successfully." });
+    } catch (err: any) {
+      toast({ title: "Error", description: err.message, variant: "destructive" });
+    }
+  };
+
+  const handleDownload = () => {
+    if (!decodedData) return;
+    try {
+      const encoded = encodeAntimatterSave(decodedData);
+      const blob = new Blob([encoded], { type: "text/plain" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = fileName || `antimatter_save_${Date.now()}.txt`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      toast({ title: "Downloaded", description: "Save file downloaded successfully." });
+    } catch (err: any) {
+      toast({ title: "Error", description: err.message, variant: "destructive" });
+    }
+  };
+
+  const handleCopyToClipboard = () => {
+    if (!decodedData) return;
+    try {
+      const encoded = encodeAntimatterSave(decodedData);
+      navigator.clipboard.writeText(encoded);
+      toast({ title: "Copied", description: "Save copied to clipboard." });
+    } catch (err: any) {
+      toast({ title: "Error", description: err.message, variant: "destructive" });
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-background">
+      <header className="border-b bg-card/50 backdrop-blur-sm">
+        <div className="container mx-auto px-6 py-4 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-primary/15 rounded-md border border-primary/20">
+              <FileCode className="h-6 w-6 text-primary" />
+            </div>
+            <div>
+              <h1 className="text-2xl font-bold">Antimatter Dimensions Save Editor</h1>
+              <p className="text-sm text-muted-foreground">Decode and modify save files</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <Link href="/">
+              <Button variant="ghost" size="sm">
+                <ArrowLeft className="h-4 w-4 mr-2" /> Home
+              </Button>
+            </Link>
+            <ThemeToggle />
+          </div>
+        </div>
+      </header>
+
+      <main className="container mx-auto px-6 py-8">
+        <FileUploader
+          label="Upload Save File"
+          onFileUpload={handleFileUpload}
+          uploadedFileName={uploadedFileName}
+          onClear={() => {
+            setUploadedFileName("");
+            setSaveInput("");
+          }}
+        />
+        <Card className="p-4 mt-6">
+          <Textarea
+            value={saveInput}
+            onChange={(e) => setSaveInput(e.target.value)}
+            placeholder="Paste your save starting with AntimatterDimensionsSavefileFormatAAB..."
+            className="font-mono text-xs min-h-32 resize-none"
+          />
+        </Card>
+        <div className="flex justify-center mt-4">
+          <Button onClick={handleDecode} disabled={!saveInput.trim()}>
+            Decode Save
+          </Button>
+        </div>
+
+        {decodedData && (
+          <>
+            <Separator className="my-6" />
+            <StatsDisplay data={decodedData} />
+            <div className="flex justify-center gap-3 mt-6">
+              <Button onClick={handleDownload} variant="default">
+                <Download className="h-4 w-4 mr-2" />
+                Download Save
+              </Button>
+              <Button onClick={handleCopyToClipboard} variant="outline">
+                <Clipboard className="h-4 w-4 mr-2" />
+                Copy to Clipboard
+              </Button>
+            </div>
+            <Separator className="my-6" />
+            <Tabs defaultValue="view">
+              <TabsList>
+                <TabsTrigger value="view">View JSON</TabsTrigger>
+                <TabsTrigger value="edit">Edit JSON</TabsTrigger>
+              </TabsList>
+              <TabsContent value="view">
+                <JsonViewer title="Decoded Save Data" data={decodedData} />
+              </TabsContent>
+              <TabsContent value="edit">
+                <JsonEditor
+                  title="Edit Save Data"
+                  initialData={decodedData}
+                  onSave={(data) => setDecodedData(data)}
+                />
+              </TabsContent>
+            </Tabs>
+          </>
+        )}
+      </main>
+    </div>
+  );
+}

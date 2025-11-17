@@ -12,16 +12,16 @@ export default function StatChart({ data }: StatChartProps) {
   const chartData = useMemo(() => {
     if (!data) return [];
 
-    const antimatter = data.antimatter ?? data.money ?? data.player?.antimatter ?? data.player?.money ?? 0;
+    const tickspeed = data.tickspeed ?? data.player?.tickspeed ?? 1;
     const infinities = data.infinities ?? data.player?.infinities ?? data.player?.infinitied ?? 0;
     const eternities = data.eternities ?? data.player?.eternities ?? 0;
     const realityShards = data.realityShards ?? data.player?.realityShards ?? 0;
 
     // Mock historical data for demonstration (in a real app, this would come from save history)
-    const baseValues = [antimatter, infinities, eternities, realityShards];
+    const baseValues = [tickspeed, infinities, eternities, realityShards];
     const historicalData = baseValues.map((value, index) => ({
       time: `T${index + 1}`,
-      antimatter: Math.max(0, value * (0.1 + index * 0.3)),
+      tickspeed: Math.max(0, tickspeed * (0.1 + index * 0.3)),
       infinities: Math.max(0, infinities * (0.1 + index * 0.2)),
       eternities: Math.max(0, eternities * (0.1 + index * 0.15)),
       realityShards: Math.max(0, realityShards * (0.1 + index * 0.1)),
@@ -82,10 +82,10 @@ export default function StatChart({ data }: StatChartProps) {
         </div>
         <div className="h-64">
           <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={chartData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+            <LineChart data={chartData} margin={{ top: 20, right: 50, left: 20, bottom: 5 }}>
               <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
               <XAxis dataKey="time" />
-              <YAxis tickFormatter={formatValue} />
+              <YAxis width={80} tickFormatter={formatValue} />
               <Tooltip content={<CustomTooltip />} />
               <Line
                 type="monotone"
@@ -128,10 +128,10 @@ export default function StatChart({ data }: StatChartProps) {
           </div>
           <div className="h-64">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={generatorData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+              <BarChart data={generatorData} margin={{ top: 20, right: 50, left: 20, bottom: 5 }}>
                 <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
                 <XAxis dataKey="name" />
-                <YAxis tickFormatter={formatValue} />
+                <YAxis width={80} tickFormatter={formatValue} />
                 <Tooltip content={<CustomTooltip />} />
                 <Bar dataKey="count" fill="hsl(var(--chart-2))" />
               </BarChart>

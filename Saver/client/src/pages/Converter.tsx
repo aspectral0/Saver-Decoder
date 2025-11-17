@@ -317,7 +317,13 @@ export default function Converter() {
                   <TabsTrigger value="edit" data-testid="tab-edit-template">Edit Template</TabsTrigger>
                 </TabsList>
                 <TabsContent value="view">
-                  <JsonViewer title="Template Structure" data={templateData} />
+                  <JsonViewer title="Template Structure" data={templateData} onSave={(data) => {
+                    setTemplateData(data);
+                    toast({
+                      title: "Template updated",
+                      description: "Changes saved successfully",
+                    });
+                  }} />
                 </TabsContent>
                 <TabsContent value="edit">
                   <JsonEditor
@@ -368,7 +374,13 @@ export default function Converter() {
                       />
                     </TabsContent>
                     <TabsContent value="view">
-                      <JsonViewer title="Converted Save Data" data={convertedData} />
+                      <JsonViewer title="Converted Save Data" data={convertedData} onSave={(data) => {
+                        setConvertedData(data);
+                        toast({
+                          title: "Data updated",
+                          description: "Changes saved successfully",
+                        });
+                      }} />
                     </TabsContent>
                     <TabsContent value="edit">
                       <JsonEditor

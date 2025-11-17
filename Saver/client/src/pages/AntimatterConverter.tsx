@@ -548,7 +548,7 @@ export default function AntimatterConverter() {
                           exit={{ opacity: 0, x: 20 }}
                           transition={{ duration: 0.3 }}
                         >
-                          <JsonViewer title="Decoded Save Data" data={decodedData} />
+                          <JsonViewer title="Decoded Save Data" data={decodedData} onSave={applyEditorChanges} />
                         </motion.div>
                       </TabsContent>
 

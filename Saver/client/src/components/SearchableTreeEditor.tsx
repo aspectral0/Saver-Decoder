@@ -1,7 +1,7 @@
-import { useState, useMemo, useEffect } from "react";
+gitimport { useState, useMemo, useEffect } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Search, X } from "lucide-react";
+import { Search, X, ChevronDown, ChevronRight, Plus, Trash2 } from "lucide-react";
 
 interface SearchableTreeEditorProps {
   data: any;
@@ -76,22 +76,22 @@ export default function SearchableTreeEditor({ data, onChange }: SearchableTreeE
   };
 
   return (
-    <div className="space-y-4">
-      <div className="flex gap-2">
+    <div className="space-y-6 p-4 bg-background rounded-lg shadow-sm border">
+      <div className="flex gap-3">
         <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-muted-foreground" />
           <Input
             placeholder="Search keys, values, or paths..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-10"
+            className="pl-12 h-11 text-base border-2 focus:border-primary transition-colors"
           />
           {searchTerm && (
             <Button
               variant="ghost"
               size="sm"
               onClick={clearSearch}
-              className="absolute right-2 top-1/2 transform -translate-y-1/2 h-6 w-6 p-0"
+              className="absolute right-3 top-1/2 transform -translate-y-1/2 h-7 w-7 p-0 hover:bg-muted"
             >
               <X className="h-4 w-4" />
             </Button>
@@ -100,7 +100,8 @@ export default function SearchableTreeEditor({ data, onChange }: SearchableTreeE
       </div>
 
       {searchTerm && Object.keys(filteredData).length === 0 && (
-        <div className="text-center py-8 text-muted-foreground">
+        <div className="text-center py-12 text-muted-foreground bg-muted/50 rounded-md">
+          <Search className="h-8 w-8 mx-auto mb-2 opacity-50" />
           No matches found for "{searchTerm}"
         </div>
       )}
@@ -206,24 +207,51 @@ function TreeEditor({
     if (node && typeof node === "object" && !Array.isArray(node)) {
       const keys = Object.keys(node);
       return (
-        <div className="pl-2 border-l ml-2">
-          <div className="flex items-center gap-3">
-            <Button variant="ghost" size="sm" onClick={toggleExpanded}>
-              {isExpanded ? "▾" : "▸"}
+        <div className="pl-4 border-l-2 border-muted ml-4 bg-muted/20 rounded-l-md">
+          <div className="flex items-center gap-4 py-2 px-3 bg-card rounded-md shadow-sm hover:shadow-md transition-shadow">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={toggleExpanded}
+              className="h-8 w-8 p-0 hover:bg-muted"
+            >
+              {isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
             </Button>
-            <strong className="truncate">{path.length === 0 ? "root" : String(path[path.length - 1])}</strong>
+            <strong className="truncate text-foreground font-semibold text-base">
+              {path.length === 0 ? "root" : String(path[path.length - 1])}
+            </strong>
+            <span className="text-xs text-muted-foreground bg-muted px-2 py-1 rounded-full">
+              object ({keys.length})
+            </span>
             <div className="ml-auto flex gap-2">
-              <Button variant="outline" size="sm" onClick={addProperty}>+ property</Button>
-              {path.length > 0 && <Button variant="ghost" size="sm" onClick={remove}>Delete</Button>}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={addProperty}
+                className="h-8 px-3 hover:bg-primary hover:text-primary-foreground transition-colors"
+              >
+                <Plus className="h-4 w-4 mr-1" />
+                Property
+              </Button>
+              {path.length > 0 && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={remove}
+                  className="h-8 w-8 p-0 text-destructive hover:bg-destructive hover:text-destructive-foreground"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              )}
             </div>
           </div>
 
           {isExpanded && (
-            <div className="pl-4 mt-2 space-y-2">
+            <div className="pl-6 mt-4 space-y-3">
               {keys.map((k) => (
-                <div key={k} className="save-row-grid">
+                <div key={k} className="save-row-grid bg-card p-3 rounded-md shadow-sm hover:shadow-md transition-shadow">
                   <div className="label">
-                    <div className="text-xs text-muted-foreground truncate">{k}</div>
+                    <div className="text-sm font-medium text-foreground truncate">{k}</div>
                   </div>
                   <div className="value">
                     <RenderNode node={node[k]} path={[...path, k]} />
@@ -241,23 +269,48 @@ function TreeEditor({
 
     if (Array.isArray(node)) {
       return (
-        <div className="pl-2 border-l ml-2">
-          <div className="flex items-center gap-3">
-            <Button variant="ghost" size="sm" onClick={toggleExpanded}>
-              {isExpanded ? "▾" : "▸"}
+        <div className="pl-4 border-l-2 border-muted ml-4 bg-muted/20 rounded-l-md">
+          <div className="flex items-center gap-4 py-2 px-3 bg-card rounded-md shadow-sm hover:shadow-md transition-shadow">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={toggleExpanded}
+              className="h-8 w-8 p-0 hover:bg-muted"
+            >
+              {isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
             </Button>
-            <strong>{String(path[path.length - 1] ?? "array")}</strong>
+            <strong className="truncate text-foreground font-semibold text-base">
+              {String(path[path.length - 1] ?? "array")}
+            </strong>
+            <span className="text-xs text-muted-foreground bg-muted px-2 py-1 rounded-full">
+              array ({node.length})
+            </span>
             <div className="ml-auto flex gap-2">
-              <Button variant="outline" size="sm" onClick={addArrayItem}>+ item</Button>
-              <Button variant="ghost" size="sm" onClick={remove}>Delete</Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={addArrayItem}
+                className="h-8 px-3 hover:bg-primary hover:text-primary-foreground transition-colors"
+              >
+                <Plus className="h-4 w-4 mr-1" />
+                Item
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={remove}
+                className="h-8 w-8 p-0 text-destructive hover:bg-destructive hover:text-destructive-foreground"
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
             </div>
           </div>
           {isExpanded && (
-            <div className="pl-4 mt-2 space-y-2">
+            <div className="pl-6 mt-4 space-y-3">
               {node.map((it: any, i: number) => (
-                <div key={i} className="save-row-grid array">
+                <div key={i} className="save-row-grid array bg-card p-3 rounded-md shadow-sm hover:shadow-md transition-shadow">
                   <div className="label">
-                    <div className="text-xs text-muted-foreground">{i}</div>
+                    <div className="text-sm font-medium text-foreground">[{i}]</div>
                   </div>
                   <div className="value">
                     <RenderNode node={it} path={[...path, i]} />
@@ -279,15 +332,29 @@ function TreeEditor({
     // For display in Save/Delete row we rely on parent grid. We'll render control group that doesn't wrap.
     const Controls = () => (
       <div className="save-actions">
-        <Button variant="ghost" size="sm" onClick={() => commit(localValue)}>Save</Button>
-        <Button variant="ghost" size="sm" onClick={remove}>Delete</Button>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => commit(localValue)}
+          className="h-8 px-3 hover:bg-primary hover:text-primary-foreground transition-colors"
+        >
+          Save
+        </Button>
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={remove}
+          className="h-8 w-8 p-0 text-destructive hover:bg-destructive hover:text-destructive-foreground"
+        >
+          <Trash2 className="h-4 w-4" />
+        </Button>
       </div>
     );
 
     const primitiveUI = (() => {
       if (typeOfNode === "boolean") {
         return (
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-4">
             <input
               type="checkbox"
               checked={!!localValue}
@@ -295,9 +362,12 @@ function TreeEditor({
                 setLocalValue(e.target.checked);
                 commit(e.target.checked);
               }}
-              className="w-5 h-5"
+              className="w-5 h-5 accent-primary"
             />
-            <div className="text-sm">{String(!!localValue)}</div>
+            <div className="text-sm font-medium text-foreground">{String(!!localValue)}</div>
+            <span className="text-xs text-muted-foreground bg-blue-100 dark:bg-blue-900 px-2 py-1 rounded-full">
+              boolean
+            </span>
             <div className="ml-auto"><Controls /></div>
           </div>
         );
@@ -305,7 +375,7 @@ function TreeEditor({
 
       if (typeOfNode === "number") {
         return (
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-3">
             <input
               type="number"
               value={localValue ?? ""}
@@ -317,8 +387,11 @@ function TreeEditor({
                   commit(Number.isNaN(n) ? localValue : n);
                 }
               }}
-              className="border rounded px-2 py-1 text-sm w-full min-w-0"
+              className="border-2 border-input rounded-md px-3 py-2 text-sm w-full min-w-0 focus:border-primary focus:ring-2 focus:ring-primary/20 transition-colors bg-background"
             />
+            <span className="text-xs text-muted-foreground bg-green-100 dark:bg-green-900 px-2 py-1 rounded-full whitespace-nowrap">
+              number
+            </span>
             <Controls />
           </div>
         );
@@ -326,7 +399,7 @@ function TreeEditor({
 
       // strings and null/undefined shown as text input (null/undefined -> empty string)
       return (
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-3">
           <input
             type="text"
             value={localValue ?? ""}
@@ -335,8 +408,11 @@ function TreeEditor({
               // keep empty string if user leaves blank
               commit(localValue ?? "");
             }}
-            className="border rounded px-2 py-1 text-sm w-full min-w-0"
+            className="border-2 border-input rounded-md px-3 py-2 text-sm w-full min-w-0 focus:border-primary focus:ring-2 focus:ring-primary/20 transition-colors bg-background"
           />
+          <span className="text-xs text-muted-foreground bg-purple-100 dark:bg-purple-900 px-2 py-1 rounded-full whitespace-nowrap">
+            string
+          </span>
           <Controls />
         </div>
       );
@@ -345,7 +421,7 @@ function TreeEditor({
     return primitiveUI;
   };
 
-  return <div className="space-y-2 overflow-auto"><RenderNode node={data} path={[]} /></div>;
+  return <div className="space-y-3 overflow-auto p-2"><RenderNode node={data} path={[]} /></div>;
 }
 
 // Helper functions (copied from original)

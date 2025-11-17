@@ -75,7 +75,10 @@ export default function StatsDisplay({ data }: StatsDisplayProps) {
     return String(value);
   };
 
-  const simpleFields = Object.entries(data || {}).filter(([key]) => !['News', 'Challenge', 'Auto', 'Infinity', 'Dimensions'].includes(key));
+  const simpleFields = Object.entries(data || {}).filter(([key, value]) => {
+    const excludedKeys = ['News', 'Challenge', 'Auto', 'Infinity', 'Dimensions', 'secretUnlocks', 'showRuns', 'requirementChecks', 'records', 'speedrun'];
+    return !excludedKeys.includes(key) && typeof value !== 'object';
+  });
 
   return (
     <div className="space-y-6">

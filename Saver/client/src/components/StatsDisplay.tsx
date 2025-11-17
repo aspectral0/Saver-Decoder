@@ -13,13 +13,10 @@ export default function StatsDisplay({ data }: StatsDisplayProps) {
   const [upgradesOpen, setUpgradesOpen] = useState(false);
 
   const formatNumber = (num: string | number) => {
-    const numStr = String(num);
-    if (numStr.includes('e+') || numStr.includes('E+')) {
-      return numStr;
-    }
-    const parsed = parseFloat(numStr);
-    if (parsed >= 1e6) {
-      return parsed.toExponential(2);
+    const parsed = parseFloat(String(num));
+    if (isNaN(parsed)) return String(num);
+    if (parsed >= 1e6 || parsed < 0.001) {
+      return parsed.toExponential(7);
     }
     return parsed.toLocaleString();
   };
@@ -58,12 +55,27 @@ export default function StatsDisplay({ data }: StatsDisplayProps) {
     if (typeof value === 'boolean') {
       return value ? 'Yes' : 'No';
     }
+    if (Array.isArray(value)) {
+      // Handle arrays - always show count
+      return `${value.length} items`;
+    }
+    if (typeof value === 'object' && value !== null) {
+      // Handle objects by checking for common properties
+      if (value.unlocked !== undefined) {
+        return value.unlocked ? 'Unlocked' : 'Locked';
+      }
+      if (value.count !== undefined) {
+        return formatNumber(value.count);
+      }
+      if (value.level !== undefined) {
+        return formatNumber(value.level);
+      }
+      return 'Object';
+    }
     return String(value);
   };
 
-  const simpleFields = Object.entries(data || {}).filter(([key, value]) => 
-    !Array.isArray(value) && typeof value !== 'object'
-  );
+  const simpleFields = Object.entries(data || {});
 
   return (
     <div className="space-y-6">
@@ -71,16 +83,16 @@ export default function StatsDisplay({ data }: StatsDisplayProps) {
         {simpleFields.map(([key, value], index) => {
           const Icon = getIcon(key);
           const colorClass = getColorIndex(index);
-          
+
           return (
-            <Card key={key} className={`p-4 border-${colorClass}/20 bg-gradient-to-br from-${colorClass}/5 to-transparent`}>
-              <div className="flex items-center gap-3">
-                <div className={`p-2 bg-${colorClass}/15 rounded-md border border-${colorClass}/20`}>
-                  <Icon className={`h-5 w-5 text-${colorClass}`} />
+            <Card key={key} className={`p-6 border-${colorClass}/20 bg-gradient-to-br from-${colorClass}/5 to-transparent`}>
+              <div className="flex flex-col items-center gap-3">
+                <div className={`p-3 bg-${colorClass}/15 rounded-md border border-${colorClass}/20`}>
+                  <Icon className={`h-8 w-8 text-${colorClass}`} />
                 </div>
-                <div className="min-w-0">
-                  <p className="text-xs text-muted-foreground">{formatKey(key)}</p>
-                  <p className="text-lg font-semibold truncate" data-testid={`text-${key.toLowerCase()}`}>
+                <div className="text-center min-w-0">
+                  <p className="text-sm text-muted-foreground">{formatKey(key)}</p>
+                  <p className="text-xl font-semibold truncate" data-testid={`text-${key.toLowerCase()}`}>
                     {renderSimpleValue(value)}
                   </p>
                 </div>
@@ -114,7 +126,7 @@ export default function StatsDisplay({ data }: StatsDisplayProps) {
                 {data.generators.map((gen: any, index: number) => (
                   <Card key={gen.id || index} className="p-3 bg-muted/30">
                     <div className="flex items-center justify-between">
-                      <span className="text-sm font-medium">{gen.id || `Generator ${index + 1}`}</span>
+                      <span className="text-sm font-medium">{typeof gen.id === 'string' ? gen.id : `Generator ${index + 1}`}</span>
                       <span className="text-sm font-semibold text-chart-3" data-testid={`generator-${gen.id || index}-count`}>
                         {formatNumber(gen.count || 0)}
                       </span>
@@ -151,7 +163,7 @@ export default function StatsDisplay({ data }: StatsDisplayProps) {
                 {data.upgrades.map((upg: any, index: number) => (
                   <Card key={upg.id || index} className="p-3 bg-muted/30">
                     <div className="flex items-center justify-between">
-                      <span className="text-sm font-medium">{upg.id || `Upgrade ${index + 1}`}</span>
+                      <span className="text-sm font-medium">{typeof upg.id === 'string' ? upg.id : `Upgrade ${index + 1}`}</span>
                       <span className="text-sm font-semibold text-chart-4" data-testid={`upgrade-${upg.id || index}-level`}>
                         Level {formatNumber(upg.level || 0)}
                       </span>

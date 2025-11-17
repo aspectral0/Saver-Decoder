@@ -272,6 +272,7 @@ export default function Converter() {
               onClear={() => {
                 setOldSaveData(null);
                 setOldFileName("");
+                setConvertedData(null);
               }}
             />
             <FileUploader
@@ -281,6 +282,7 @@ export default function Converter() {
               onClear={() => {
                 setTemplateData(null);
                 setTemplateFileName("");
+                setConvertedData(null);
               }}
             />
           </div>

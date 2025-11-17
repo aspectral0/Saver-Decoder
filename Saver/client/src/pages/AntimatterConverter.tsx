@@ -6,17 +6,23 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Download, FileCode, Clipboard, ArrowLeft } from "lucide-react";
+import { Download, FileCode, Clipboard, ArrowLeft, BarChart3 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import JsonViewer from "@/components/JsonViewer";
 import JsonEditor from "@/components/JsonEditor";
+import StatsDisplay from "@/components/StatsDisplay";
+import ValueEditor from "@/components/ValueEditor";
+import SearchableTreeEditor from "@/components/SearchableTreeEditor";
+import StatChart from "@/components/StatChart";
+import PresetManager from "@/components/PresetManager";
 import ThemeToggle from "@/components/ThemeToggle";
 import FileUploader from "@/components/FileUploader";
+import { motion, AnimatePresence } from "framer-motion";
 import pako from "pako";
 
 /* Import layout fixes for tree rows so Save / Delete and checkboxes stay aligned */
-import "@/styles/Save-editor-ui.css";
-
+import "../index.css";                 // import the first CSS
+import "../styles/Save-editor-UI.css"; // import the second CSS
 // ------------------------ CONSTANTS ------------------------
 const ANTIMATTER_PREFIX = "AntimatterDimensionsSavefileFormatAAB";
 const ANTIMATTER_SUFFIX = "EndOfSavefile";
@@ -303,216 +309,7 @@ function isNumericString(s: string) {
   return !Number.isNaN(Number(s));
 }
 
-// ------------------ TreeEditor (grid rows, no wrapping) ------------------
-function TreeEditor({ data, onChange }: { data: any; onChange: (newData: any) => void }) {
-  const [, setTick] = useState(0);
-  const rerender = () => setTick((n) => n + 1);
 
-  const RenderNode = ({ node, path }: { node: any; path: Path }) => {
-    const [expanded, setExpanded] = useState(true);
-    const [localValue, setLocalValue] = useState<any>("");
-
-    useEffect(() => {
-      if (node === null || node === undefined) setLocalValue("");
-      else if (typeof node === "boolean") setLocalValue(Boolean(node));
-      else setLocalValue(String(node));
-      // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [node]);
-
-    const commit = (val: any) => {
-      const newData = structuredClone(data);
-      let finalVal: any = val;
-      // Choose coercion strategy: keep booleans/number types if original was such
-      if (typeof node === "boolean") finalVal = !!val;
-      else if (typeof node === "number") {
-        if (String(val).trim() === "") finalVal = "";
-        else {
-          const n = Number(val);
-          finalVal = Number.isNaN(n) ? val : n;
-        }
-      } else {
-        if (val === null || val === undefined) finalVal = "";
-        else finalVal = val;
-      }
-      setAtPath(newData, path, finalVal);
-      onChange(newData);
-    };
-
-    const addProperty = () => {
-      const key = prompt("Property name:");
-      if (!key) return;
-      const newData = structuredClone(data);
-      const target = getAtPath(newData, path);
-      if (target && typeof target === "object") {
-        target[key] = "";
-        onChange(newData);
-        rerender();
-      }
-    };
-
-    const addArrayItem = () => {
-      const newData = structuredClone(data);
-      const target = getAtPath(newData, path);
-      if (Array.isArray(target)) {
-        target.push("");
-        onChange(newData);
-        rerender();
-      }
-    };
-
-    const remove = () => {
-      if (!confirm("Delete this item?")) return;
-      const newData = structuredClone(data);
-      deleteAtPath(newData, path);
-      onChange(newData);
-    };
-
-    // Objects: render children rows
-    if (node && typeof node === "object" && !Array.isArray(node)) {
-      const keys = Object.keys(node);
-      return (
-        <div className="pl-2 border-l ml-2">
-          <div className="flex items-center gap-3">
-            <Button variant="ghost" size="sm" onClick={() => setExpanded(!expanded)}>
-              {expanded ? "▾" : "▸"}
-            </Button>
-            <strong className="truncate">{path.length === 0 ? "root" : String(path[path.length - 1])}</strong>
-            <div className="ml-auto flex gap-2">
-              <Button variant="outline" size="sm" onClick={addProperty}>+ property</Button>
-              {path.length > 0 && <Button variant="ghost" size="sm" onClick={remove}>Delete</Button>}
-            </div>
-          </div>
-
-          {expanded && (
-            <div className="pl-4 mt-2 space-y-2">
-              {keys.map((k) => (
-                <div key={k} className="save-row-grid">
-                  <div className="label">
-                    <div className="text-xs text-muted-foreground truncate">{k}</div>
-                  </div>
-                  <div className="value">
-                    <RenderNode node={node[k]} path={[...path, k]} />
-                  </div>
-                  <div className="save-actions">
-                    {/* Keep contextual actions here if needed */}
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      );
-    }
-
-    // Arrays: render each element as a row
-    if (Array.isArray(node)) {
-      return (
-        <div className="pl-2 border-l ml-2">
-          <div className="flex items-center gap-3">
-            <Button variant="ghost" size="sm" onClick={() => setExpanded(!expanded)}>
-              {expanded ? "▾" : "▸"}
-            </Button>
-            <strong>{String(path[path.length - 1] ?? "array")}</strong>
-            <div className="ml-auto flex gap-2">
-              <Button variant="outline" size="sm" onClick={addArrayItem}>+ item</Button>
-              <Button variant="ghost" size="sm" onClick={remove}>Delete</Button>
-            </div>
-          </div>
-          {expanded && (
-            <div className="pl-4 mt-2 space-y-2">
-              {node.map((it: any, i: number) => (
-                <div key={i} className="save-row-grid array">
-                  <div className="label">
-                    <div className="text-xs text-muted-foreground">{i}</div>
-                  </div>
-                  <div className="value">
-                    <RenderNode node={it} path={[...path, i]} />
-                  </div>
-                  <div className="save-actions">
-                    {/* actions are part of primitive UI, no extra here */}
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      );
-    }
-
-    // Primitive handling: show type-aware inputs; layout uses grid parent so here we render just input+actions
-    const typeOfNode = typeof node;
-
-    // For display in Save/Delete row we rely on parent grid. We'll render control group that doesn't wrap.
-    const Controls = () => (
-      <div className="save-actions">
-        <Button variant="ghost" size="sm" onClick={() => commit(localValue)}>Save</Button>
-        <Button variant="ghost" size="sm" onClick={remove}>Delete</Button>
-      </div>
-    );
-
-    const primitiveUI = (() => {
-      if (typeOfNode === "boolean") {
-        return (
-          <div className="flex items-center gap-3">
-            <input
-              type="checkbox"
-              checked={!!localValue}
-              onChange={(e) => {
-                setLocalValue(e.target.checked);
-                commit(e.target.checked);
-              }}
-              className="w-5 h-5"
-            />
-            <div className="text-sm">{String(!!localValue)}</div>
-            <div className="ml-auto"><Controls /></div>
-          </div>
-        );
-      }
-
-      if (typeOfNode === "number") {
-        return (
-          <div className="flex items-center gap-2">
-            <input
-              type="number"
-              value={localValue ?? ""}
-              onChange={(e) => setLocalValue(e.target.value)}
-              onBlur={() => {
-                if (String(localValue).trim() === "") commit("");
-                else {
-                  const n = Number(localValue);
-                  commit(Number.isNaN(n) ? localValue : n);
-                }
-              }}
-              className="border rounded px-2 py-1 text-sm w-full min-w-0"
-            />
-            <Controls />
-          </div>
-        );
-      }
-
-      // strings and null/undefined shown as text input (null/undefined -> empty string)
-      return (
-        <div className="flex items-center gap-2">
-          <input
-            type="text"
-            value={localValue ?? ""}
-            onChange={(e) => setLocalValue(e.target.value)}
-            onBlur={() => {
-              // keep empty string if user leaves blank
-              commit(localValue ?? "");
-            }}
-            className="border rounded px-2 py-1 text-sm w-full min-w-0"
-          />
-          <Controls />
-        </div>
-      );
-    })();
-
-    return primitiveUI;
-  };
-
-  return <div className="space-y-2 overflow-auto"><RenderNode node={data} path={[]} /></div>;
-}
 
 // ------------------ Main Component ------------------
 export default function AntimatterConverter() {
@@ -521,12 +318,42 @@ export default function AntimatterConverter() {
   const [decodedData, setDecodedData] = useState<any>(null);
   const [fileName, setFileName] = useState("");
   const [uploadedFileName, setUploadedFileName] = useState("");
-  const [selectedTab, setSelectedTab] = useState<"view" | "edit">("view");
+  const [selectedTab, setSelectedTab] = useState<"view" | "edit" | "form" | "chart" | "stats">("view");
   const [unsavedChanges, setUnsavedChanges] = useState(false);
+  const [autoSaveEnabled, setAutoSaveEnabled] = useState(true);
 
   useEffect(() => {
     setUnsavedChanges(false);
   }, [decodedData]);
+
+  // Auto-save functionality
+  useEffect(() => {
+    if (autoSaveEnabled && decodedData && unsavedChanges) {
+      const draftKey = `antimatter_draft_${Date.now()}`;
+      localStorage.setItem(draftKey, JSON.stringify(decodedData));
+      // Keep only last 5 drafts
+      const keys = Object.keys(localStorage).filter(key => key.startsWith('antimatter_draft_'));
+      if (keys.length > 5) {
+        keys.sort().slice(0, keys.length - 5).forEach(key => localStorage.removeItem(key));
+      }
+    }
+  }, [decodedData, unsavedChanges, autoSaveEnabled]);
+
+  // Load draft on mount
+  useEffect(() => {
+    const keys = Object.keys(localStorage).filter(key => key.startsWith('antimatter_draft_'));
+    if (keys.length > 0) {
+      const latestKey = keys.sort().pop()!;
+      try {
+        const draftData = JSON.parse(localStorage.getItem(latestKey)!);
+        setDecodedData(draftData);
+        toast({ title: "Draft Loaded", description: "Previous unsaved changes have been restored." });
+      } catch (e) {
+        // Invalid draft, remove it
+        localStorage.removeItem(latestKey);
+      }
+    }
+  }, []);
 
   const handleFileUpload = (content: string, name: string) => {
     setSaveInput(content);
@@ -581,25 +408,18 @@ export default function AntimatterConverter() {
     setUnsavedChanges(true);
   };
 
+  const applyPreset = (presetData: any) => {
+    setDecodedData(presetData);
+    setUnsavedChanges(true);
+  };
+
   const resetToDecoded = () => {
     setDecodedData((d: any) => (d ? structuredClone(d) : d));
     setUnsavedChanges(false);
     toast({ title: "Reset", description: "Editor reset to last decoded data." });
   };
 
-  const prettyStats = useMemo(() => {
-    if (!decodedData) return null;
-    const stats: { label: string; value: string }[] = [];
-    const antimatter = decodedData.antimatter ?? decodedData.money ?? decodedData.player?.antimatter ?? decodedData.player?.money;
-    if (antimatter !== undefined && antimatter !== null) stats.push({ label: "Antimatter", value: String(antimatter) });
-    const infinities = decodedData.infinities ?? decodedData.player?.infinities ?? decodedData.player?.infinitied;
-    if (infinities !== undefined && infinities !== null) stats.push({ label: "Infinities", value: String(infinities) });
-    const eternities = decodedData.eternities ?? decodedData.player?.eternities;
-    if (eternities !== undefined && eternities !== null) stats.push({ label: "Eternities", value: String(eternities) });
-    const realityShards = decodedData.realityShards ?? decodedData.player?.realityShards;
-    if (realityShards !== undefined && realityShards !== null) stats.push({ label: "Reality Shards", value: String(realityShards) });
-    return stats;
-  }, [decodedData]);
+  // Remove unused prettyStats as we now use StatsDisplay
 
   return (
     <div className="min-h-screen bg-background">
@@ -633,6 +453,7 @@ export default function AntimatterConverter() {
           onClear={() => {
             setUploadedFileName("");
             setSaveInput("");
+            setDecodedData(null);
           }}
         />
         <Card className="p-4 mt-6">
@@ -656,76 +477,137 @@ export default function AntimatterConverter() {
         {decodedData && (
           <>
             <Separator className="my-6" />
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <Card className="p-4">
-                <h3 className="text-lg font-semibold mb-2">Quick Stats</h3>
-                {prettyStats && prettyStats.length > 0 ? (
-                  prettyStats.map((s) => (
-                    <div key={s.label} className="flex justify-between py-1">
-                      <span className="text-sm text-muted-foreground">{s.label}</span>
-                      <span className="font-mono text-sm">{s.value}</span>
-                    </div>
-                  ))
-                ) : (
-                  <div className="text-sm text-muted-foreground">No quick stats found</div>
-                )}
-                <Separator className="my-3" />
-                <div className="flex flex-wrap gap-2">
-                  <Button onClick={handleDownload} variant="default">
-                    <Download className="h-4 w-4 mr-2" /> Download
-                  </Button>
-                  <Button onClick={handleCopyToClipboard} variant="outline">
-                    <Clipboard className="h-4 w-4 mr-2" /> Copy
-                  </Button>
-                  <Button onClick={() => { setSaveInput(encodeAntimatterSave(decodedData)); toast({ title: "Encoded", description: "Encoded as Antimatter save." }); }} variant="ghost">
-                    Export Antimatter
-                  </Button>
-                </div>
-              </Card>
-
-              <Card className="p-4 md:col-span-2">
-                <div className="flex items-center justify-between mb-3">
-                  <h3 className="text-lg font-semibold">Editor</h3>
-                  <div className="flex gap-2">
-                    <Button onClick={resetToDecoded} variant="outline">Reset Editor</Button>
-                    <Button onClick={() => { const encoded = encodeAntimatterSave(decodedData); navigator.clipboard.writeText(encoded); toast({ title: "Copied", description: "Encoded save copied." }); }} variant="ghost">Copy Encoded</Button>
+            <motion.div
+              className="grid grid-cols-1 md:grid-cols-3 gap-4"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5 }}
+            >
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ duration: 0.3, delay: 0.1 }}
+              >
+                <Card className="p-4 bg-gradient-to-br from-card to-card/50 border-primary/20">
+                  <div className="flex flex-wrap gap-2">
+                    <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                      <Button onClick={handleDownload} variant="default" className="bg-gradient-to-r from-primary to-primary/80">
+                        <Download className="h-4 w-4 mr-2" /> Download
+                      </Button>
+                    </motion.div>
+                    <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                      <Button onClick={handleCopyToClipboard} variant="outline">
+                        <Clipboard className="h-4 w-4 mr-2" /> Copy
+                      </Button>
+                    </motion.div>
+                    <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                      <Button onClick={() => { setSaveInput(encodeAntimatterSave(decodedData)); toast({ title: "Encoded", description: "Encoded as Antimatter save." }); }} variant="ghost">
+                        Export Antimatter
+                      </Button>
+                    </motion.div>
                   </div>
-                </div>
-
-                <div className="mb-4">
-                  <div className="flex gap-2">
-                    <Button variant={selectedTab === "view" ? "default" : "ghost"} onClick={() => setSelectedTab("view")}>View JSON</Button>
-                    <Button variant={selectedTab === "edit" ? "default" : "ghost"} onClick={() => setSelectedTab("edit")}>Edit Save</Button>
+                  <div className="mt-3">
+                    <PresetManager data={decodedData} onApplyPreset={applyPreset} />
                   </div>
-                </div>
+                </Card>
+              </motion.div>
 
-                {selectedTab === "view" ? (
-                  <JsonViewer title="Decoded Save Data" data={decodedData} />
-                ) : (
-                  <>
-                    <TreeEditor data={decodedData} onChange={applyEditorChanges} />
-                    <div className="flex justify-end gap-2 mt-4">
-                      <Button onClick={handleDownload} variant="default">Download Save</Button>
-                      <Button onClick={() => { setSaveInput(encodeAntimatterSave(decodedData)); toast({ title: "Encoded", description: "Encoded save placed in input box." }); }} variant="outline">Place Encoded in Input</Button>
+              <motion.div
+                className="md:col-span-2"
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ duration: 0.3, delay: 0.2 }}
+              >
+                <Card className="p-4 bg-gradient-to-br from-card to-card/50 border-primary/20">
+                  <div className="flex items-center justify-between mb-3">
+                    <h3 className="text-lg font-semibold">Editor</h3>
+                    <div className="flex gap-2">
+                      <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                        <Button onClick={resetToDecoded} variant="outline">Reset Editor</Button>
+                      </motion.div>
+                      <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                        <Button onClick={() => { const encoded = encodeAntimatterSave(decodedData); navigator.clipboard.writeText(encoded); toast({ title: "Copied", description: "Encoded save copied." }); }} variant="ghost">Copy Encoded</Button>
+                      </motion.div>
                     </div>
-                  </>
-                )}
-              </Card>
-            </div>
+                  </div>
 
-            <Separator className="my-6" />
-            <Tabs defaultValue="view" value={selectedTab} onValueChange={(v: any) => setSelectedTab(v)}>
-              <TabsList>
-                <TabsTrigger value="view">View JSON</TabsTrigger>
-                <TabsTrigger value="edit">Edit JSON</TabsTrigger>
-              </TabsList>
-              <TabsContent value="view">
-                <JsonViewer title="Decoded Save Data" data={decodedData} />
-              </TabsContent>
-              <TabsContent value="edit">
-                <JsonEditor title="Edit Save Data" initialData={decodedData} onSave={(data) => { setDecodedData(data); setUnsavedChanges(true); }} />
-              </TabsContent>
-            </Tabs>
+                  <Tabs value={selectedTab} onValueChange={(v: any) => setSelectedTab(v)} className="w-full">
+                    <TabsList className="grid w-full grid-cols-5">
+                      <TabsTrigger value="view">View JSON</TabsTrigger>
+                      <TabsTrigger value="edit">Tree Edit</TabsTrigger>
+                      <TabsTrigger value="form">Form Edit</TabsTrigger>
+                      <TabsTrigger value="chart">Charts</TabsTrigger>
+                      <TabsTrigger value="stats">Stats</TabsTrigger>
+                    </TabsList>
+
+                    <AnimatePresence mode="wait">
+                      <TabsContent value="view" className="mt-4">
+                        <motion.div
+                          initial={{ opacity: 0, x: -20 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          exit={{ opacity: 0, x: 20 }}
+                          transition={{ duration: 0.3 }}
+                        >
+                          <JsonViewer title="Decoded Save Data" data={decodedData} />
+                        </motion.div>
+                      </TabsContent>
+
+                      <TabsContent value="edit" className="mt-4">
+                        <motion.div
+                          initial={{ opacity: 0, x: -20 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          exit={{ opacity: 0, x: 20 }}
+                          transition={{ duration: 0.3 }}
+                        >
+                          <SearchableTreeEditor data={decodedData} onChange={applyEditorChanges} />
+                          <div className="flex justify-end gap-2 mt-4">
+                            <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                              <Button onClick={handleDownload} variant="default">Download Save</Button>
+                            </motion.div>
+                            <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                              <Button onClick={() => { setSaveInput(encodeAntimatterSave(decodedData)); toast({ title: "Encoded", description: "Encoded save placed in input box." }); }} variant="outline">Place Encoded in Input</Button>
+                            </motion.div>
+                          </div>
+                        </motion.div>
+                      </TabsContent>
+
+                      <TabsContent value="form" className="mt-4">
+                        <motion.div
+                          initial={{ opacity: 0, x: -20 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          exit={{ opacity: 0, x: 20 }}
+                          transition={{ duration: 0.3 }}
+                        >
+                          <ValueEditor data={decodedData} onSave={applyEditorChanges} />
+                        </motion.div>
+                      </TabsContent>
+
+                      <TabsContent value="chart" className="mt-4">
+                        <motion.div
+                          initial={{ opacity: 0, x: -20 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          exit={{ opacity: 0, x: 20 }}
+                          transition={{ duration: 0.3 }}
+                        >
+                          <StatChart data={decodedData} />
+                        </motion.div>
+                      </TabsContent>
+
+                      <TabsContent value="stats" className="mt-4">
+                        <motion.div
+                          initial={{ opacity: 0, x: -20 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          exit={{ opacity: 0, x: 20 }}
+                          transition={{ duration: 0.3 }}
+                        >
+                          <StatsDisplay data={decodedData} />
+                        </motion.div>
+                      </TabsContent>
+                    </AnimatePresence>
+                  </Tabs>
+                </Card>
+              </motion.div>
+            </motion.div>
           </>
         )}
       </main>

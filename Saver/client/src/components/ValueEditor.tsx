@@ -69,6 +69,20 @@ export default function ValueEditor({ data, onSave }: ValueEditorProps) {
       .trim();
   };
 
+  const getPlaceholder = (key: string) => {
+    const lower = key.toLowerCase();
+    if (lower.includes('antimatter') || lower.includes('money')) return 'e.g. 1000000';
+    if (lower.includes('infinity') || lower.includes('infinities')) return 'e.g. 100';
+    if (lower.includes('eternity') || lower.includes('eternities')) return 'e.g. 50';
+    if (lower.includes('count')) return 'e.g. 10';
+    if (lower.includes('level')) return 'e.g. 5';
+    if (lower.includes('id')) return `e.g. ${key.toLowerCase()}1`;
+    if (lower.includes('unlocked')) return 'e.g. true';
+    if (lower.includes('prestige')) return 'e.g. 25';
+    if (lower.includes('reality')) return 'e.g. 10';
+    return formatKey(key);
+  };
+
   const simpleFields = Object.entries(editedData).filter(([key, value]) => 
     !Array.isArray(value) && (typeof value !== 'object' || value === null)
   );
@@ -97,7 +111,7 @@ export default function ValueEditor({ data, onSave }: ValueEditorProps) {
                 id={`field-${key}`}
                 value={String(editedData[key] || '')}
                 onChange={(e) => updateSimpleValue(key, e.target.value)}
-                placeholder={formatKey(key)}
+                placeholder={getPlaceholder(key)}
               />
             </div>
           ))}
@@ -124,7 +138,7 @@ export default function ValueEditor({ data, onSave }: ValueEditorProps) {
                           const newValue = { ...(editedData[key] as Record<string, any>), [subKey]: e.target.value };
                           setEditedData({ ...editedData, [key]: newValue });
                         }}
-                        placeholder={formatKey(subKey)}
+                        placeholder={getPlaceholder(subKey)}
                       />
                     </div>
                   ))}
@@ -158,7 +172,7 @@ export default function ValueEditor({ data, onSave }: ValueEditorProps) {
                         newGenerators[index] = { ...newGenerators[index], id: e.target.value };
                         setEditedData({ ...editedData, generators: newGenerators });
                       }}
-                      placeholder="Generator ID"
+                      placeholder={getPlaceholder('id')}
                     />
                   </div>
                   <div>
@@ -168,7 +182,7 @@ export default function ValueEditor({ data, onSave }: ValueEditorProps) {
                       type="number"
                       value={gen.count || 0}
                       onChange={(e) => updateGeneratorCount(index, e.target.value)}
-                      placeholder="Count"
+                      placeholder={getPlaceholder('count')}
                     />
                   </div>
                 </div>
@@ -211,7 +225,7 @@ export default function ValueEditor({ data, onSave }: ValueEditorProps) {
                         newUpgrades[index] = { ...newUpgrades[index], id: e.target.value };
                         setEditedData({ ...editedData, upgrades: newUpgrades });
                       }}
-                      placeholder="Upgrade ID"
+                      placeholder={getPlaceholder('id')}
                     />
                   </div>
                   <div>
@@ -221,7 +235,7 @@ export default function ValueEditor({ data, onSave }: ValueEditorProps) {
                       type="number"
                       value={upg.level || 0}
                       onChange={(e) => updateUpgradeLevel(index, e.target.value)}
-                      placeholder="Level"
+                      placeholder={getPlaceholder('level')}
                     />
                   </div>
                 </div>

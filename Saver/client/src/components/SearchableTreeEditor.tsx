@@ -1,4 +1,4 @@
-gitimport { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Search, X, ChevronDown, ChevronRight, Plus, Trash2 } from "lucide-react";
@@ -76,7 +76,7 @@ export default function SearchableTreeEditor({ data, onChange }: SearchableTreeE
   };
 
   return (
-    <div className="space-y-6 p-4 bg-background rounded-lg shadow-sm border">
+    <div className="space-y-6 p-4">
       <div className="flex gap-3">
         <div className="relative flex-1">
           <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-muted-foreground" />
@@ -106,13 +106,15 @@ export default function SearchableTreeEditor({ data, onChange }: SearchableTreeE
         </div>
       )}
 
-      <TreeEditor
-        data={searchTerm ? filteredData : data}
-        onChange={onChange}
-        expandedPaths={expandedPaths}
-        setExpandedPaths={setExpandedPaths}
-        isSearchActive={!!searchTerm}
-      />
+      <div className="bg-background rounded-lg shadow-sm border overflow-auto w-fit min-w-full">
+        <TreeEditor
+          data={searchTerm ? filteredData : data}
+          onChange={onChange}
+          expandedPaths={expandedPaths}
+          setExpandedPaths={setExpandedPaths}
+          isSearchActive={!!searchTerm}
+        />
+      </div>
     </div>
   );
 }
@@ -421,7 +423,7 @@ function TreeEditor({
     return primitiveUI;
   };
 
-  return <div className="space-y-3 overflow-auto p-2"><RenderNode node={data} path={[]} /></div>;
+  return <div className="space-y-3 p-4"><RenderNode node={data} path={[]} /></div>;
 }
 
 // Helper functions (copied from original)

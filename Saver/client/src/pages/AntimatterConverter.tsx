@@ -14,6 +14,9 @@ import ThemeToggle from "@/components/ThemeToggle";
 import FileUploader from "@/components/FileUploader";
 import pako from "pako";
 
+/* Import layout fixes for tree rows so Save / Delete and checkboxes stay aligned */
+import "@/styles/Save-editor-ui.css";
+
 // ------------------------ CONSTANTS ------------------------
 const ANTIMATTER_PREFIX = "AntimatterDimensionsSavefileFormatAAB";
 const ANTIMATTER_SUFFIX = "EndOfSavefile";
@@ -41,7 +44,7 @@ function _decompress(length: number, resetValue: number, getNextValue: (index: n
   let i: number;
   let w: string;
   let bits: number, resb: number, maxpower: number, power: number;
-  let c: string;
+  let c: string = "";
   const data = { val: getNextValue(0), position: resetValue, index: 1 };
 
   for (i = 0; i < 3; i++) dictionary[i] = String(i);
@@ -383,15 +386,15 @@ function TreeEditor({ data, onChange }: { data: any; onChange: (newData: any) =>
           {expanded && (
             <div className="pl-4 mt-2 space-y-2">
               {keys.map((k) => (
-                <div key={k} className="grid items-center" style={{ gridTemplateColumns: "140px 1fr 140px", gap: "0.5rem" }}>
-                  <div className="min-w-0">
+                <div key={k} className="save-row-grid">
+                  <div className="label">
                     <div className="text-xs text-muted-foreground truncate">{k}</div>
                   </div>
-                  <div className="min-w-0">
+                  <div className="value">
                     <RenderNode node={node[k]} path={[...path, k]} />
                   </div>
-                  <div className="flex items-center justify-end gap-2 whitespace-nowrap">
-                    {/* Contextual actions can be added here */}
+                  <div className="save-actions">
+                    {/* Keep contextual actions here if needed */}
                   </div>
                 </div>
               ))}
@@ -418,14 +421,14 @@ function TreeEditor({ data, onChange }: { data: any; onChange: (newData: any) =>
           {expanded && (
             <div className="pl-4 mt-2 space-y-2">
               {node.map((it: any, i: number) => (
-                <div key={i} className="grid items-center" style={{ gridTemplateColumns: "80px 1fr 140px", gap: "0.5rem" }}>
-                  <div className="min-w-0">
+                <div key={i} className="save-row-grid array">
+                  <div className="label">
                     <div className="text-xs text-muted-foreground">{i}</div>
                   </div>
-                  <div className="min-w-0">
+                  <div className="value">
                     <RenderNode node={it} path={[...path, i]} />
                   </div>
-                  <div className="flex items-center justify-end gap-2 whitespace-nowrap">
+                  <div className="save-actions">
                     {/* actions are part of primitive UI, no extra here */}
                   </div>
                 </div>
@@ -441,7 +444,7 @@ function TreeEditor({ data, onChange }: { data: any; onChange: (newData: any) =>
 
     // For display in Save/Delete row we rely on parent grid. We'll render control group that doesn't wrap.
     const Controls = () => (
-      <div className="flex items-center gap-2 whitespace-nowrap">
+      <div className="save-actions">
         <Button variant="ghost" size="sm" onClick={() => commit(localValue)}>Save</Button>
         <Button variant="ghost" size="sm" onClick={remove}>Delete</Button>
       </div>

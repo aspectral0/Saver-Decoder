@@ -1,0 +1,59 @@
+/* Layout helpers for tree rows used by AntimatterConverter.TreeEditor
+   Keeps label | value | actions aligned and prevents action buttons from wrapping.
+*/
+.save-row-grid {
+  display: grid;
+  align-items: center;
+  gap: 0.5rem;
+  grid-template-columns: 140px 1fr 140px; /* label | value | actions */
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* Slightly narrower layout for array rows */
+.save-row-grid.array {
+  grid-template-columns: 80px 1fr 140px; /* index | value | actions */
+}
+
+/* Ensure the left column (labels) truncates */
+.save-row-grid .label {
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+/* Value column should stretch but not force actions to wrap */
+.save-row-grid .value {
+  min-width: 0;
+  width: 100%;
+}
+
+/* Actions column: keep controls on single line and aligned right */
+.save-row-grid .save-actions {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: flex-end;
+  align-items: center;
+  white-space: nowrap;
+}
+
+/* Make small buttons consistent height so they don't increase row height */
+.save-row-grid .save-actions .btn,
+.save-row-grid .save-actions button {
+  height: 32px;
+  padding: 0.35rem 0.6rem;
+  white-space: nowrap;
+  box-sizing: border-box;
+}
+
+/* When viewport is narrow, stack into single column for better responsiveness */
+@media (max-width: 520px) {
+  .save-row-grid,
+  .save-row-grid.array {
+    grid-template-columns: 1fr;
+  }
+  .save-row-grid .save-actions {
+    justify-content: flex-start;
+  }
+}

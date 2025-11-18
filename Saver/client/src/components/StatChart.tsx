@@ -12,19 +12,20 @@ export default function StatChart({ data }: StatChartProps) {
   const chartData = useMemo(() => {
     if (!data) return [];
 
-    const tickspeed = data.tickspeed ?? data.player?.tickspeed ?? 1;
-    const infinities = data.infinities ?? data.player?.infinities ?? data.player?.infinitied ?? 0;
-    const eternities = data.eternities ?? data.player?.eternities ?? 0;
-    const realityShards = data.realityShards ?? data.player?.realityShards ?? 0;
+    // Atom Idle specific data
+    const atoms = parseFloat(data.atoms) || 0;
+    const prestigePoints = parseFloat(data.prestigePoints) || 0;
+    const lives = parseFloat(data.lives) || 0;
+    const stardust = parseFloat(data.stardust) || 0;
 
     // Mock historical data for demonstration (in a real app, this would come from save history)
-    const baseValues = [tickspeed, infinities, eternities, realityShards];
+    const baseValues = [atoms, prestigePoints, lives, stardust];
     const historicalData = baseValues.map((value, index) => ({
       time: `T${index + 1}`,
-      tickspeed: Math.max(0, tickspeed * (0.1 + index * 0.3)),
-      infinities: Math.max(0, infinities * (0.1 + index * 0.2)),
-      eternities: Math.max(0, eternities * (0.1 + index * 0.15)),
-      realityShards: Math.max(0, realityShards * (0.1 + index * 0.1)),
+      atoms: Math.max(0, atoms * (0.1 + index * 0.3)),
+      prestigePoints: Math.max(0, prestigePoints * (0.1 + index * 0.2)),
+      lives: Math.max(0, lives * (0.1 + index * 0.15)),
+      stardust: Math.max(0, stardust * (0.1 + index * 0.1)),
     }));
 
     return historicalData;
@@ -89,28 +90,28 @@ export default function StatChart({ data }: StatChartProps) {
               <Tooltip content={<CustomTooltip />} />
               <Line
                 type="monotone"
-                dataKey="antimatter"
+                dataKey="atoms"
                 stroke="hsl(var(--chart-1))"
                 strokeWidth={2}
                 dot={{ fill: "hsl(var(--chart-1))" }}
               />
               <Line
                 type="monotone"
-                dataKey="infinities"
+                dataKey="prestigePoints"
                 stroke="hsl(var(--chart-2))"
                 strokeWidth={2}
                 dot={{ fill: "hsl(var(--chart-2))" }}
               />
               <Line
                 type="monotone"
-                dataKey="eternities"
+                dataKey="lives"
                 stroke="hsl(var(--chart-3))"
                 strokeWidth={2}
                 dot={{ fill: "hsl(var(--chart-3))" }}
               />
               <Line
                 type="monotone"
-                dataKey="realityShards"
+                dataKey="stardust"
                 stroke="hsl(var(--chart-4))"
                 strokeWidth={2}
                 dot={{ fill: "hsl(var(--chart-4))" }}

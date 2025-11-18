@@ -5,6 +5,8 @@ import JsonViewer from "@/components/JsonViewer";
 import JsonEditor from "@/components/JsonEditor";
 import ValueEditor from "@/components/ValueEditor";
 import StatsDisplay from "@/components/StatsDisplay";
+import SearchableTreeEditor from "@/components/SearchableTreeEditor";
+import StatChart from "@/components/StatChart";
 import ThemeToggle from "@/components/ThemeToggle";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
@@ -355,13 +357,36 @@ export default function Converter() {
                 </div>
                 <StatsDisplay data={convertedData} />
                 <div className="mt-6">
-                  <Tabs defaultValue="edit-values" className="w-full">
-                    <TabsList className="mb-4">
-                      <TabsTrigger value="edit-values" data-testid="tab-edit-values">Edit Values</TabsTrigger>
+                  <Tabs defaultValue="form" className="w-full">
+                    <TabsList className="mb-4 grid w-full grid-cols-5">
                       <TabsTrigger value="view" data-testid="tab-view-converted">View JSON</TabsTrigger>
-                      <TabsTrigger value="edit" data-testid="tab-edit-converted">Edit JSON</TabsTrigger>
+                      <TabsTrigger value="edit" data-testid="tab-edit-converted">Tree Edit</TabsTrigger>
+                      <TabsTrigger value="form" data-testid="tab-edit-values">Form Edit</TabsTrigger>
+                      <TabsTrigger value="chart" data-testid="tab-chart-converted">Charts</TabsTrigger>
+                      <TabsTrigger value="stats" data-testid="tab-stats-converted">Stats</TabsTrigger>
                     </TabsList>
-                    <TabsContent value="edit-values">
+                    <TabsContent value="view">
+                      <JsonViewer title="Converted Save Data" data={convertedData} onSave={(data) => {
+                        setConvertedData(data);
+                        toast({
+                          title: "Data updated",
+                          description: "Changes saved successfully",
+                        });
+                      }} />
+                    </TabsContent>
+                    <TabsContent value="edit">
+                      <SearchableTreeEditor
+                        data={convertedData}
+                        onChange={(data) => {
+                          setConvertedData(data);
+                          toast({
+                            title: "Data updated",
+                            description: "Changes saved successfully",
+                          });
+                        }}
+                      />
+                    </TabsContent>
+                    <TabsContent value="form">
                       <ValueEditor
                         data={convertedData}
                         onSave={(data) => {
@@ -373,27 +398,11 @@ export default function Converter() {
                         }}
                       />
                     </TabsContent>
-                    <TabsContent value="view">
-                      <JsonViewer title="Converted Save Data" data={convertedData} onSave={(data) => {
-                        setConvertedData(data);
-                        toast({
-                          title: "Data updated",
-                          description: "Changes saved successfully",
-                        });
-                      }} />
+                    <TabsContent value="chart">
+                      <StatChart data={convertedData} />
                     </TabsContent>
-                    <TabsContent value="edit">
-                      <JsonEditor
-                        title="Edit Converted Data"
-                        initialData={convertedData}
-                        onSave={(data) => {
-                          setConvertedData(data);
-                          toast({
-                            title: "Data updated",
-                            description: "Changes saved successfully",
-                          });
-                        }}
-                      />
+                    <TabsContent value="stats">
+                      <StatsDisplay data={convertedData} />
                     </TabsContent>
                   </Tabs>
                 </div>

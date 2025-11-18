@@ -173,6 +173,12 @@ function TreeEditor({
           const n = Number(val);
           finalVal = Number.isNaN(n) ? val : n;
         }
+      } else if (typeof node === "object" && node !== null) {
+        try {
+          finalVal = JSON.parse(val);
+        } catch {
+          finalVal = val; // keep as string if invalid JSON
+        }
       } else {
         if (val === null || val === undefined) finalVal = "";
         else finalVal = val;
@@ -402,6 +408,24 @@ function TreeEditor({
       }
 
       // strings and null/undefined shown as text input (null/undefined -> empty string)
+      if (typeOfNode === "object" && node !== null) {
+        return (
+          <div className="flex items-center gap-3">
+            <textarea
+              value={localValue ?? ""}
+              onChange={(e) => setLocalValue(e.target.value)}
+              onBlur={() => {
+                commit(localValue ?? "");
+              }}
+              className="border-2 border-input rounded-md px-3 py-2 text-sm w-full min-w-0 focus:border-primary focus:ring-2 focus:ring-primary/20 transition-colors bg-background font-mono"
+              rows={3}
+              placeholder='{"key": "value"}'
+            />
+            <Controls />
+          </div>
+        );
+      }
+
       return (
         <div className="flex items-center gap-3">
           <input

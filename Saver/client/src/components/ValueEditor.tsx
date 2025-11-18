@@ -4,7 +4,9 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { Save, Plus, Trash2 } from "lucide-react";
+import SearchableTreeEditor from "@/components/SearchableTreeEditor";
 
 interface ValueEditorProps {
   data: any;
@@ -87,8 +89,12 @@ export default function ValueEditor({ data, onSave }: ValueEditorProps) {
     !Array.isArray(value) && (typeof value !== 'object' || value === null)
   );
 
-  const objectFields = Object.entries(editedData).filter(([key, value]) => 
+  const objectFields = Object.entries(editedData).filter(([key, value]) =>
     typeof value === 'object' && value !== null && !Array.isArray(value)
+  );
+
+  const arrayFields = Object.entries(editedData).filter(([key, value]) =>
+    Array.isArray(value)
   );
 
   return (
@@ -121,30 +127,217 @@ export default function ValueEditor({ data, onSave }: ValueEditorProps) {
       {objectFields.length > 0 && (
         <Card className="p-6">
           <h4 className="font-semibold mb-4">Object Values</h4>
-          <div className="space-y-4">
-            {objectFields.map(([key, value]) => (
-              <div key={key} className="space-y-2">
-                <Label htmlFor={`obj-${key}`}>{formatKey(key)}</Label>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  {Object.entries(value as Record<string, any>).map(([subKey, subValue]) => (
-                    <div key={subKey} className="space-y-1">
-                      <Label htmlFor={`obj-${key}-${subKey}`} className="text-xs text-muted-foreground">
-                        {formatKey(subKey)}
-                      </Label>
-                      <Input
-                        id={`obj-${key}-${subKey}`}
-                        value={String(subValue || '')}
-                        onChange={(e) => {
-                          const newValue = { ...(editedData[key] as Record<string, any>), [subKey]: e.target.value };
-                          setEditedData({ ...editedData, [key]: newValue });
-                        }}
-                        placeholder={getPlaceholder(subKey)}
-                      />
-                    </div>
-                  ))}
+          <div className="space-y-6">
+            {objectFields.map(([key, value]) => {
+              const objValue = value as Record<string, any>;
+              const nestedArrays = Object.entries(objValue).filter(([subKey, subValue]) =>
+                Array.isArray(subValue) && subValue.length > 0 && typeof subValue[0] === 'object' && subValue[0] !== null
+              );
+
+              if (nestedArrays.length > 0) {
+                // Handle objects containing arrays of objects
+                return (
+                  <div key={key} className="space-y-6">
+                    <Label className="text-base font-medium">{formatKey(key)}</Label>
+                    {nestedArrays.map(([subKey, subValue]) => {
+                      const arrayValue = subValue as any[];
+                      const allKeys = Array.from(new Set(arrayValue.flatMap(obj => Object.keys(obj))));
+
+                      return (
+                        <div key={subKey} className="space-y-4">
+                          <Label className="text-sm font-medium">{formatKey(subKey)}</Label>
+                          <div className="overflow-x-auto rounded-lg border border-border bg-card shadow-sm">
+                            <table className="w-full border-collapse">
+                              <thead>
+                                <tr className="bg-muted/30 border-b border-border">
+                                  <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">#</th>
+                                  {allKeys.map(fieldKey => (
+                                    <th key={fieldKey} className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                                      {formatKey(fieldKey)}
+                                    </th>
+                                  ))}
+                                </tr>
+                              </thead>
+                              <tbody className="divide-y divide-border">
+                                {arrayValue.map((item, index) => (
+                                  <tr key={index} className={`hover:bg-muted/10 transition-colors ${index % 2 === 0 ? 'bg-background' : 'bg-muted/5'}`}>
+                                    <td className="px-4 py-3 text-sm font-medium text-muted-foreground">
+                                      {index + 1}
+                                    </td>
+                                    {allKeys.map(fieldKey => (
+                                      <td key={fieldKey} className="px-4 py-3">
+                                        <Input
+                                          value={String(item[fieldKey] ?? '')}
+                                          onChange={(e) => {
+                                            const newArray = [...arrayValue];
+                                            newArray[index] = { ...newArray[index], [fieldKey]: e.target.value };
+                                            const newObj = { ...objValue, [subKey]: newArray };
+                                            setEditedData({ ...editedData, [key]: newObj });
+                                          }}
+                                          placeholder={getPlaceholder(fieldKey)}
+                                          className="h-9 text-sm border-0 bg-transparent focus:bg-background focus:ring-1 focus:ring-ring px-2 py-1 rounded"
+                                        />
+                                      </td>
+                                    ))}
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        </div>
+                      );
+                    })}
+
+                    {/* Handle other nested objects that are not arrays */}
+                    {Object.entries(objValue).filter(([subKey, subValue]) =>
+                      typeof subValue === 'object' && subValue !== null && !Array.isArray(subValue)
+                    ).map(([subKey, subValue]) => {
+                      const nestedObj = subValue as Record<string, any>;
+                      const nestedKeys = Object.keys(nestedObj);
+
+                      return (
+                        <div key={subKey} className="space-y-4">
+                          <Label className="text-sm font-medium">{formatKey(subKey)}</Label>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 rounded-lg border border-border bg-card shadow-sm">
+                            {nestedKeys.map(nestedKey => (
+                              <div key={nestedKey} className="space-y-2">
+                                <Label htmlFor={`obj-${key}-${subKey}-${nestedKey}`} className="text-xs text-muted-foreground">
+                                  {formatKey(nestedKey)}
+                                </Label>
+                                <Input
+                                  id={`obj-${key}-${subKey}-${nestedKey}`}
+                                  value={String(nestedObj[nestedKey] ?? '')}
+                                  onChange={(e) => {
+                                    const newNestedObj = { ...nestedObj, [nestedKey]: e.target.value };
+                                    const newObj = { ...objValue, [subKey]: newNestedObj };
+                                    setEditedData({ ...editedData, [key]: newObj });
+                                  }}
+                                  placeholder={getPlaceholder(nestedKey)}
+                                  className="h-9 text-sm"
+                                />
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                );
+              }
+
+              // Handle simple objects as grid of inputs
+              const objKeys = Object.keys(objValue);
+              return (
+                <div key={key} className="space-y-4">
+                  <Label className="text-base font-medium">{formatKey(key)}</Label>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 rounded-lg border border-border bg-card shadow-sm">
+                    {objKeys.map(objKey => (
+                      <div key={objKey} className="space-y-2">
+                        <Label htmlFor={`obj-${key}-${objKey}`} className="text-xs text-muted-foreground">
+                          {formatKey(objKey)}
+                        </Label>
+                        <Input
+                          id={`obj-${key}-${objKey}`}
+                          value={String(objValue[objKey] ?? '')}
+                          onChange={(e) => {
+                            const newObj = { ...objValue, [objKey]: e.target.value };
+                            setEditedData({ ...editedData, [key]: newObj });
+                          }}
+                          placeholder={getPlaceholder(objKey)}
+                          className="h-9 text-sm"
+                        />
+                      </div>
+                    ))}
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
+          </div>
+        </Card>
+      )}
+
+      {arrayFields.length > 0 && (
+        <Card className="p-6">
+          <h4 className="font-semibold mb-4">Array Values</h4>
+          <div className="space-y-6">
+            {arrayFields.map(([key, value]) => {
+              const arrayValue = value as any[];
+              const isGeneratorArray = arrayValue.length > 0 && typeof arrayValue[0] === 'object' && arrayValue[0] !== null;
+
+              if (isGeneratorArray) {
+                // Get all unique keys from the objects in the array
+                const allKeys = Array.from(new Set(arrayValue.flatMap(obj => Object.keys(obj))));
+
+                return (
+                  <div key={key} className="space-y-4">
+                    <Label className="text-base font-medium">{formatKey(key)}</Label>
+                          <div className="overflow-x-auto rounded-lg border border-border bg-card shadow-sm">
+                            <table className="w-full border-collapse">
+                              <thead>
+                                <tr className="bg-muted/30 border-b border-border">
+                                  <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">#</th>
+                                  {allKeys.map(fieldKey => (
+                                    <th key={fieldKey} className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                                      {formatKey(fieldKey)}
+                                    </th>
+                                  ))}
+                                </tr>
+                              </thead>
+                              <tbody className="divide-y divide-border">
+                                {arrayValue.map((item, index) => (
+                                  <tr key={index} className={`hover:bg-muted/10 transition-colors ${index % 2 === 0 ? 'bg-background' : 'bg-muted/5'}`}>
+                                    <td className="px-4 py-3 text-sm font-medium text-muted-foreground">
+                                      {index + 1}
+                                    </td>
+                                    {allKeys.map(fieldKey => (
+                                      <td key={fieldKey} className="px-4 py-3">
+                                        <Input
+                                          value={String(item[fieldKey] ?? '')}
+                                          onChange={(e) => {
+                                            const newArray = [...arrayValue];
+                                            newArray[index] = { ...newArray[index], [fieldKey]: e.target.value };
+                                            setEditedData({ ...editedData, [key]: newArray });
+                                          }}
+                                          placeholder={getPlaceholder(fieldKey)}
+                                          className="h-9 text-sm border-0 bg-transparent focus:bg-background focus:ring-1 focus:ring-ring px-2 py-1 rounded"
+                                        />
+                                      </td>
+                                    ))}
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                  </div>
+                );
+              }
+
+              // Handle arrays of primitives or mixed types
+              return (
+                <div key={key} className="space-y-4">
+                  <Label className="text-base font-medium">{formatKey(key)}</Label>
+                  <div className="space-y-3 p-4 rounded-lg border border-border bg-card shadow-sm">
+                    {arrayValue.map((item, index) => (
+                      <div key={index} className="flex items-center gap-3">
+                        <Label className="text-sm font-medium text-muted-foreground min-w-0 w-12">
+                          {index + 1}:
+                        </Label>
+                        <Input
+                          value={String(item ?? '')}
+                          onChange={(e) => {
+                            const newArray = [...arrayValue];
+                            newArray[index] = e.target.value;
+                            setEditedData({ ...editedData, [key]: newArray });
+                          }}
+                          placeholder={`Item ${index + 1}`}
+                          className="flex-1 h-9 text-sm"
+                        />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })}
           </div>
         </Card>
       )}

@@ -140,12 +140,14 @@ function TreeEditor({
     const [localValue, setLocalValue] = useState<any>(() => {
       if (node === null || node === undefined) return "";
       if (typeof node === "boolean") return Boolean(node);
+      if (typeof node === "object" && node !== null) return JSON.stringify(node, null, 2) === '{}' ? '{"example": "value"}' : JSON.stringify(node, null, 2);
       return String(node);
     });
 
     useEffect(() => {
       if (node === null || node === undefined) setLocalValue("");
       else if (typeof node === "boolean") setLocalValue(Boolean(node));
+      else if (typeof node === "object" && node !== null) setLocalValue(JSON.stringify(node, null, 2) === '{}' ? '{"example": "value"}' : JSON.stringify(node, null, 2));
       else setLocalValue(String(node));
     }, [node]);
 

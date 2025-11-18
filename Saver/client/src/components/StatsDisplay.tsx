@@ -15,8 +15,9 @@ export default function StatsDisplay({ data }: StatsDisplayProps) {
   const formatNumber = (num: string | number) => {
     const parsed = parseFloat(String(num));
     if (isNaN(parsed)) return String(num);
+    if (parsed === 0) return '0';
     if (parsed >= 1e6 || parsed < 0.001) {
-      return parsed.toExponential(7);
+      return parsed.toExponential(2);
     }
     return parsed.toLocaleString();
   };

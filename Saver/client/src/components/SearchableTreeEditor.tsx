@@ -11,7 +11,7 @@ interface SearchableTreeEditorProps {
 export default function SearchableTreeEditor({ data, onChange }: SearchableTreeEditorProps) {
   const [searchTerm, setSearchTerm] = useState("");
   const [expandedPaths, setExpandedPaths] = useState<Set<string>>(new Set());
-
+  
   const { filteredData, pathsToExpand } = useMemo(() => {
     if (!searchTerm.trim()) return { filteredData: data, pathsToExpand: new Set<string>() };
 

@@ -9,27 +9,45 @@ interface StatChartProps {
 }
 
 export default function StatChart({ data }: StatChartProps) {
+  const isAtomIdle = data && (data.atoms !== undefined || data.stardust !== undefined);
+
   const chartData = useMemo(() => {
     if (!data) return [];
 
-    // Atom Idle specific data
-    const atoms = parseFloat(data.atoms) || 0;
-    const prestigePoints = parseFloat(data.prestigePoints) || 0;
-    const lives = parseFloat(data.lives) || 0;
-    const stardust = parseFloat(data.stardust) || 0;
+    if (isAtomIdle) {
+      // Atom Idle specific data
+      const metaHumanCount = parseFloat(data.metaHumanCount) || 0;
+      const superhumans = parseFloat(data.superhumans) || 0;
+      const stardust = parseFloat(data.stardust) || 0;
 
-    // Mock historical data for demonstration (in a real app, this would come from save history)
-    const baseValues = [atoms, prestigePoints, lives, stardust];
-    const historicalData = baseValues.map((value, index) => ({
-      time: `T${index + 1}`,
-      atoms: Math.max(0, atoms * (0.1 + index * 0.3)),
-      prestigePoints: Math.max(0, prestigePoints * (0.1 + index * 0.2)),
-      lives: Math.max(0, lives * (0.1 + index * 0.15)),
-      stardust: Math.max(0, stardust * (0.1 + index * 0.1)),
-    }));
+      // Mock historical data for demonstration (in a real app, this would come from save history)
+      const baseValues = [metaHumanCount, superhumans, stardust];
+      const historicalData = Array.from({ length: 10 }, (_, index) => ({
+        time: `T${index + 1}`,
+        metaHumanCount: Math.floor(Math.max(0, metaHumanCount * (0.1 + index * 0.09))),
+        superhumans: Math.floor(Math.max(0, superhumans * (0.1 + index * 0.09))),
+        stardust: Math.floor(Math.max(0, stardust * (0.1 + index * 0.09))),
+      }));
 
-    return historicalData;
-  }, [data]);
+      return historicalData;
+    } else {
+      // Antimatter Dimensions specific data
+      const infinityPoints = parseFloat(data.infinityPoints) || 0;
+      const replicanti = parseFloat(data.replicanti?.amount) || parseFloat(data.replicanti) || 0;
+      const infinities = parseFloat(data.infinitiesCount) || parseFloat(data.infinities) || 0;
+
+      // Mock historical data
+      const baseValues = [infinityPoints, replicanti, infinities];
+      const historicalData = Array.from({ length: 10 }, (_, index) => ({
+        time: `T${index + 1}`,
+        infinityPoints: Math.floor(Math.max(0, infinityPoints * (0.1 + index * 0.09))),
+        replicanti: Math.floor(Math.max(0, replicanti * (0.1 + index * 0.09))),
+        infinities: Math.floor(Math.max(0, infinities * (0.1 + index * 0.09))),
+      }));
+
+      return historicalData;
+    }
+  }, [data, isAtomIdle]);
 
   const generatorData = useMemo(() => {
     if (!data?.generators || !Array.isArray(data.generators)) return [];
@@ -88,40 +106,61 @@ export default function StatChart({ data }: StatChartProps) {
               <XAxis dataKey="time" />
               <YAxis width={80} tickFormatter={formatValue} />
               <Tooltip content={<CustomTooltip />} />
-              <Line
-                type="monotone"
-                dataKey="atoms"
-                stroke="hsl(var(--chart-1))"
-                strokeWidth={2}
-                dot={{ fill: "hsl(var(--chart-1))" }}
-              />
-              <Line
-                type="monotone"
-                dataKey="prestigePoints"
-                stroke="hsl(var(--chart-2))"
-                strokeWidth={2}
-                dot={{ fill: "hsl(var(--chart-2))" }}
-              />
-              <Line
-                type="monotone"
-                dataKey="lives"
-                stroke="hsl(var(--chart-3))"
-                strokeWidth={2}
-                dot={{ fill: "hsl(var(--chart-3))" }}
-              />
-              <Line
-                type="monotone"
-                dataKey="stardust"
-                stroke="hsl(var(--chart-4))"
-                strokeWidth={2}
-                dot={{ fill: "hsl(var(--chart-4))" }}
-              />
+              {isAtomIdle ? (
+                <>
+                  <Line
+                    type="monotone"
+                    dataKey="metaHumanCount"
+                    stroke="hsl(var(--chart-1))"
+                    strokeWidth={2}
+                    dot={{ fill: "hsl(var(--chart-1))" }}
+                  />
+                  <Line
+                    type="monotone"
+                    dataKey="superhumans"
+                    stroke="hsl(var(--chart-2))"
+                    strokeWidth={2}
+                    dot={{ fill: "hsl(var(--chart-2))" }}
+                  />
+                  <Line
+                    type="monotone"
+                    dataKey="stardust"
+                    stroke="hsl(var(--chart-3))"
+                    strokeWidth={2}
+                    dot={{ fill: "hsl(var(--chart-3))" }}
+                  />
+                </>
+              ) : (
+                <>
+                  <Line
+                    type="monotone"
+                    dataKey="infinityPoints"
+                    stroke="hsl(var(--chart-1))"
+                    strokeWidth={2}
+                    dot={{ fill: "hsl(var(--chart-1))" }}
+                  />
+                  <Line
+                    type="monotone"
+                    dataKey="replicanti"
+                    stroke="hsl(var(--chart-2))"
+                    strokeWidth={2}
+                    dot={{ fill: "hsl(var(--chart-2))" }}
+                  />
+                  <Line
+                    type="monotone"
+                    dataKey="infinities"
+                    stroke="hsl(var(--chart-3))"
+                    strokeWidth={2}
+                    dot={{ fill: "hsl(var(--chart-3))" }}
+                  />
+                </>
+              )}
             </LineChart>
           </ResponsiveContainer>
         </div>
       </Card>
 
-      {generatorData.length > 0 && (
+      {isAtomIdle && generatorData.length > 0 && (
         <Card className="p-6">
           <div className="flex items-center gap-3 mb-4">
             <BarChart3 className="h-5 w-5 text-chart-2" />
